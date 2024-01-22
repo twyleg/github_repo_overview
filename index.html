@@ -20,17 +20,47 @@
 
   </head>
   <body>
-
+  
     <div class="d-flex flex-column p-4 gap-2">
-      <button id="reload-button" type="button" class="p-2 btn btn-light">Reload</button>
-      <input id="filter-input-field" class="p-2 form-control" type="text" placeholder="Filter">
-      <div class="d-flex flex-column align-items-center">
-        <div id="loading-spinner" class="p-2 spinner-border" role="status"></div>
-      </div>
+      <header class="d-flex flex-wrap justify-content-center py-3 p-4 border-bottom">
+        <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
+          <svg class="bi me-2" width="40" height="32"><use xlink:href="/github_repo_overview/docs/img/svg/favicon.svg"/></svg>
+          <span class="fs-4">GitHub Overview</span>
+        </a>
+
+        <ul class="nav nav-pills">
+          <li class="nav-item"><a href="#" id="repos-button" class="nav-link active" aria-current="page">Repos</a></li>
+          <li class="nav-item"><a href="#" id="orgs-button" class="nav-link">Orgs</a></li>
+        </ul>
+      </header>
     </div>
 
-    <div class="d-flex flex-column flex-md-row p-4 gap-4 align-items-center justify-content-center">
-      <div id="project-list" class="list-group"></div>
+    <div id="repos-list-div">
+      <div class="d-flex flex-column p-4 gap-2">
+        <button id="repos-reload-button" type="button" class="p-2 btn btn-light">Reload</button>
+        <input id="repos-filter-input-field" class="p-2 form-control" type="text" placeholder="Filter">
+        <div class="d-flex flex-column align-items-center">
+          <div id="repos-loading-spinner" class="p-2 spinner-border" role="status"></div>
+        </div>
+      </div>
+
+      <div class="d-flex flex-column flex-md-row  justify-content-center ">
+        <div id="repos-list" class="list-group"></div>
+      </div>
+    </div>
+    
+    <div id="orgs-list-div">
+      <div class="d-flex flex-column p-4 gap-2">
+        <button id="orgs-reload-button" type="button" class="p-2 btn btn-light">Reload</button>
+        <input id="orgs-filter-input-field" class="p-2 form-control" type="text" placeholder="Filter">
+        <div class="d-flex flex-column align-items-center">
+          <div id="orgs-loading-spinner" class="p-2 spinner-border" role="status"></div>
+        </div>
+      </div>
+
+      <div class="d-flex flex-column flex-md-row  justify-content-center ">
+        <div id="orgs-list" class="list-group"></div>
+      </div>
     </div>
 
   </body>

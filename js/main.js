@@ -1,7 +1,7 @@
-// Copyright (C) 2022 twyleg
+// Copyright (C) 2024 twyleg
 
-function addListElement(headline, link, avatar_url, content, age) {
-    var projectListElement = document.getElementById("project-list");
+function addReposListElement(headline, link, avatar_url, content, age) {
+    var reposListElement = document.getElementById("repos-list");
 
     var aElement = document.createElement("a");
     aElement.id = headline;
@@ -42,18 +42,65 @@ function addListElement(headline, link, avatar_url, content, age) {
     aElement.appendChild(imgElement);
     aElement.appendChild(layoutDivElement);
 
-    projectListElement.appendChild(aElement);
+    reposListElement.appendChild(aElement);
 }
 
-function clearListElements() {
-    var projectListElement = document.getElementById("project-list");
-    projectListElement.replaceChildren();
+function clearReposListElements() {
+    var repoListElement = document.getElementById("repos-list");
+    repoListElement.replaceChildren();
 }
 
-function removeListElement(id) {
-    var projectListElement = document.getElementById("project-list");
-    var projectListEntryElement = projectListElement.querySelector('#'+id);
-    projectListEntryElement.remove();
+function removeReposListElement(id) {
+    var repoListElement = document.getElementById("repos-list");
+    var repoListEntryElement = repoListElement.querySelector('#'+id);
+    repoListEntryElement.remove();
+}
+
+
+function addOrgsListElement(headline, link, avatar_url) {
+    var orgsListElement = document.getElementById("orgs-list");
+    
+    var aElement = document.createElement("a");
+    aElement.id = headline;
+    aElement.className = "list-group-item list-group-item-action d-flex gap-3 py-3";
+    aElement.setAttribute("aria-current", "true");
+    aElement.setAttribute("href", link);
+    
+    var imgElement = document.createElement("img");
+    imgElement.className = "rounded-circle flex-shrink-0";
+    imgElement.setAttribute("src", avatar_url);
+    imgElement.setAttribute("alt", "img");
+    imgElement.setAttribute("width", "32");
+    imgElement.setAttribute("height", "32");
+    
+    var layoutDivElement = document.createElement("div");
+    layoutDivElement.className = "d-flex gap-2 w-100 justify-content-between";
+    
+    var containerDivElement = document.createElement("div");
+    
+    var h6Element = document.createElement("h6");
+    h6Element.className = "mb-0";
+    h6Element.innerHTML = headline;
+    
+    containerDivElement.appendChild(h6Element);
+    
+    layoutDivElement.appendChild(containerDivElement);
+    
+    aElement.appendChild(imgElement);
+    aElement.appendChild(layoutDivElement);
+    
+    orgsListElement.appendChild(aElement);
+}
+
+function clearOrgsListElements() {
+    var orgsListElement = document.getElementById("orgs-list");
+    orgsListElement.replaceChildren();
+}
+
+function removeOrgsListElement(id) {
+    var orgsListElement = document.getElementById("orgs-list");
+    var orgsListEntryElement = orgsListElement.querySelector('#'+id);
+    orgsListEntryElement.remove();
 }
 
 
@@ -91,9 +138,9 @@ function getToken() {
   return token;
 }
 
-async function getProjects(token, reload = false) {
+async function getRepos(token, reload = false) {
 
-    var projects = [];
+    var repos = [];
     var currentPage = 1;
 
     do {
@@ -113,10 +160,10 @@ async function getProjects(token, reload = false) {
 
         var newProjects = await response.json();
         console.log(newProjects);
-        projects.push.apply(projects, newProjects);
+        repos.push.apply(repos, newProjects);
 
     } while(newProjects.length);
-    return projects;
+    return repos;
 }
 
 
@@ -167,61 +214,131 @@ async function getOrgs(token) {
 
 }
 
-function getFilter() {
-    let filterInputFieldElement = document.getElementById("filter-input-field");
+function getReposFilter() {
+    let filterInputFieldElement = document.getElementById("repos-filter-input-field");
     return filterInputFieldElement.value;
 }
 
-function getProjectAgeInDays(project) {
-    let updatedTimestamp = Date.parse(project.pushed_at);
+function getOrgsFilter() {
+    let filterInputFieldElement = document.getElementById("orgs-filter-input-field");
+    return filterInputFieldElement.value;
+}
+
+function getRepoAgeInDays(repo) {
+    let updatedTimestamp = Date.parse(repo.pushed_at);
     let dt = Date.now() - updatedTimestamp;
     return Math.floor(dt / (1000 * 60 * 60 * 24));
 }
 
 
-async function showProjects(projects) {
+async function showRepos(repos) {
 
-    let filter = getFilter();
-    clearListElements();
+    let filter = getReposFilter();
+    clearReposListElements();
 
-    for (const project of projects) {
-        if (project.full_name.includes(filter)) {
-            let projectAgeInDays = getProjectAgeInDays(project);
-            addListElement(project.full_name, project.html_url, project.owner.avatar_url, project.description, projectAgeInDays+"d");
+    for (const repo of repos) {
+        if (repo.full_name.includes(filter)) {
+            let repoAgeInDays = getRepoAgeInDays(repo);
+            addReposListElement(repo.full_name, repo.html_url, repo.owner.avatar_url, repo.description, repoAgeInDays+"d");
         }
     }
 }
 
-function setLoadingSpinnerVisibility(visible) {
-    document.getElementById("loading-spinner").style.display = visible ? "inherit" : "none";
+async function showOrgs(orgs) {
+
+    let filter = getOrgsFilter();
+    clearOrgsListElements();
+
+    for (const org of orgs) {
+        if (org.login.includes(filter)) {
+            addOrgsListElement(org.login, `https://github.com/orgs/${org.login}/repositories`, org.avatar_url);
+        }
+    }
+}
+
+function setReposLoadingSpinnerVisibility(visible) {
+    document.getElementById("repos-loading-spinner").style.display = visible ? "inherit" : "none";
+}
+
+function setOrgsLoadingSpinnerVisibility(visible) {
+    document.getElementById("orgs-loading-spinner").style.display = visible ? "inherit" : "none";
 }
 
 
 async function main() {
+    
+    document.getElementById("repos-list-div").style.display = "inherit";
+    document.getElementById("orgs-list-div").style.display = "none";
 
     let token = getToken();
-    let projects = await getProjects(token, false);
-    setLoadingSpinnerVisibility(false);
-    showProjects(projects);
+    let repos = await getRepos(token, false);
+    let orgs = await getOrgs(token, false);
+    
+    setReposLoadingSpinnerVisibility(false);
+    setOrgsLoadingSpinnerVisibility(false);
+    
+    showRepos(repos);
+    showOrgs(orgs);
+    
+    var reposButtonElement = document.getElementById("repos-button");
+    reposButtonElement.onclick = function(){
+        console.log("Repos button pressed");
+        document.getElementById("repos-list-div").style.display = "inherit";
+        document.getElementById("orgs-list-div").style.display = "none";
+        reposButtonElement.classList.add("active")
+        orgsButtonElement.classList.remove("active")
+    };
 
-    var reloadButtonElement = document.getElementById("reload-button");
+    var orgsButtonElement = document.getElementById("orgs-button");
+    orgsButtonElement.onclick = function(){
+        console.log("Orgs button pressed");
+        document.getElementById("repos-list-div").style.display = "none";
+        document.getElementById("orgs-list-div").style.display = "inherit";
+        reposButtonElement.classList.remove("active")
+        orgsButtonElement.classList.add("active")
+    };
+
+    
+
+    var reloadButtonElement = document.getElementById("repos-reload-button");
     reloadButtonElement.onclick = async function(){
         clearListElements();
         setLoadingSpinnerVisibility(true);
-        projects = await getProjects(token, true);
+        repos = await getRepos(token, true);
         setLoadingSpinnerVisibility(false);
-        showProjects(projects);
+        showRepos(repos);
     };
 
-    let timeOut;
-    var filterInputFieldElement = document.getElementById("filter-input-field");
-    filterInputFieldElement.oninput = function(){
-        clearTimeout(timeOut);
+    let reposTimeOut;
+    var reposFilterInputFieldElement = document.getElementById("repos-filter-input-field");
+    reposFilterInputFieldElement.oninput = function(){
+        clearTimeout(reposTimeOut);
         timeOut = setTimeout(() => {
-            showProjects(projects);
+            showRepos(repos);
+        }, 500)
+    };
+    
+    
+    
+    var orgsReloadButtonElement = document.getElementById("orgs-reload-button");
+    orgsReloadButtonElement.onclick = async function(){
+        clearListElements();
+        setLoadingSpinnerVisibility(true);
+        orgs = await getOrgs(token, true);
+        setLoadingSpinnerVisibility(false);
+        showOrgs(orgs);
+    };
+
+    let orgsTimeOut;
+    var orgsFilterInputFieldElement = document.getElementById("orgs-filter-input-field");
+    orgsFilterInputFieldElement.oninput = function(){
+        clearTimeout(orgsTimeOut);
+        timeOut = setTimeout(() => {
+            showOrgs(orgs);
         }, 500)
     };
 }
 
-
-main();
+document.addEventListener("DOMContentLoaded", function(){
+    main();
+});
