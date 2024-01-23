@@ -300,12 +300,12 @@ async function main() {
 
     
 
-    var reloadButtonElement = document.getElementById("repos-reload-button");
-    reloadButtonElement.onclick = async function(){
-        clearListElements();
-        setLoadingSpinnerVisibility(true);
+    var reposReloadButtonElement = document.getElementById("repos-reload-button");
+    reposReloadButtonElement.onclick = async function(){
+        clearReposListElements();
+        setReposLoadingSpinnerVisibility(true);
         repos = await getRepos(token, true);
-        setLoadingSpinnerVisibility(false);
+        setReposLoadingSpinnerVisibility(false);
         showRepos(repos);
     };
 
@@ -322,10 +322,10 @@ async function main() {
     
     var orgsReloadButtonElement = document.getElementById("orgs-reload-button");
     orgsReloadButtonElement.onclick = async function(){
-        clearListElements();
-        setLoadingSpinnerVisibility(true);
+        clearOrgsListElements();
+        setOrgsLoadingSpinnerVisibility(true);
         orgs = await getOrgs(token, true);
-        setLoadingSpinnerVisibility(false);
+        setOrgsLoadingSpinnerVisibility(false);
         showOrgs(orgs);
     };
 
