@@ -195,13 +195,13 @@ async function getReposByOrg(token, org) {
 }
 
 
-async function getOrgs(token) {
+async function getOrgs(token, reload = false) {
 
     const response = await fetch("https://api.github.com/user/orgs?" + new URLSearchParams({
         per_page: 100
     }).toString(), {
         method: "GET", // *GET, POST, PUT, DELETE, etc.
-        cache: "force-cache", // *default, no-cache, reload, force-cache, only-if-cached
+        cache: reload ? "reload" : "force-cache", // *default, no-cache, reload, force-cache, only-if-cached
         headers: {
             "Accept": "application/vnd.github+json",
             "Authorization": "Bearer " + token,
