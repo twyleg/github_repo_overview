@@ -16,7 +16,7 @@ In action:
 
 ## Authentication
 
-For an evaluation of signing in with GitHub instead of manually entering a token, see [Authentication alternatives](docs/authentication.md). The current application still uses the token flow described below.
+For an evaluation under the no-backend requirement, see [Authentication alternatives](docs/authentication.md). It recommends reusing a PAT saved in a password manager, with optional localStorage as a future convenience improvement. The current application still uses the cookie-based token flow described below.
 
 The project uses the official [GitHub REST-API](https://docs.github.com/en/rest?apiVersion=2022-11-28) and makes extensive use of the [list-repositories-for-the-authenticated-user](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-repositories-for-the-authenticated-user) API-Call.
 

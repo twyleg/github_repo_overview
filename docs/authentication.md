@@ -1,40 +1,46 @@
 # Authentication alternatives
 
-Evaluation for issue #1, checked against GitHub documentation on 2026-10-25.
+Evaluation for issue #1, revised on 2026-10-25 after the requirement to keep the application static, without a backend.
 
-## Recommendation
+## Recommendation without a backend
 
-Use a GitHub OAuth App with a small backend for **Sign in with GitHub**. This is the most feasible match for the current goal: an overview of repositories accessible to a user across multiple organizations, with minimal changes to repository discovery. Users authenticate on GitHub, including any required two-factor authentication; this application must never collect their GitHub password. Access still uses a token internally, but users no longer create or paste one themselves.
+Keep the personal access token (PAT) flow and save the token in a password manager so it can be reused after clearing browser data. Clearing a cookie does not revoke the token on GitHub: creating a new token each time is unnecessary while the old one remains valid.
 
-This is an evaluation, not an implemented login feature. The existing personal access token flow remains in place.
+As a follow-up usability improvement, replace the token cookie with opt-in **Remember on this browser** storage in `localStorage`. This survives cookie-only deletion, but clearing all site data removes it too. A password manager provides a separate copy for that case. This is the smallest feasible change that preserves GitHub Pages hosting and the existing repository discovery across organizations. It does not provide automatic GitHub sign-in or permanent access.
 
-## Current constraints
+This document evaluates alternatives; token storage and authentication behavior have not been changed.
 
-`js/main.js` prompts for a personal access token, stores it in a JavaScript-readable cookie for 365 days, and calls `/user/repos` and `/user/orgs` directly. Removing that cookie removes the local copy; it does not itself revoke the token on GitHub, so the same still-valid token can be entered again.
+## Current behavior and storage limits
 
-The site is static. [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages) serves HTML, CSS, and JavaScript and cannot host the proposed backend. Signing into github.com does not automatically authenticate API requests from this site.
+`js/main.js` prompts for a PAT, stores it in a JavaScript-readable cookie for 365 days, and sends it to the GitHub REST API for repository and organization discovery. The site runs entirely in the browser. Signing into github.com does not give this application access to the user's private repositories.
 
-## Options
+[localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage) persists across browser sessions and is scoped to the origin. Whether a browser's deletion command removes it depends on whether that command clears cookies alone or other site data as well. It cannot guarantee survival of every browser cleanup operation.
 
-| Option | Fit for this application | Cost or limitation |
-| --- | --- | --- |
-| OAuth App with backend | Recommended for preserving the user's cross-organization repository overview. | Requires backend hosting, app registration, and broad permissions for private repositories. |
-| GitHub App with user authorization | Better permission isolation; suitable if users accept an overview limited to app-accessible repositories. | Requires installation on relevant accounts and repository selection, potentially involving organization owners. |
-| Device authorization flow | Avoids manual personal token creation. | Intended for headless clients; entering a verification code and polling adds friction to a browser application. |
-| Keep PAT, change browser storage | Smallest code change; no backend. | Does not provide GitHub login. Clearing site data still removes storage, and JavaScript can read the credential. |
+Both the current cookie and localStorage expose the credential to scripts running on the page. localStorage is a convenience change, not a security improvement. On GitHub Pages, other projects under the same origin also share its storage. Do not put tokens in URLs or repository files; use a password manager's secure entry for the recovery copy.
 
-GitHub generally recommends GitHub Apps for their fine-grained permissions. However, a GitHub App user token only sees resources accessible to both the user and the app. An OAuth App better preserves this project's broad discovery behavior, at the cost of broader privileges. Organization policies can still restrict access; neither option guarantees every organization will allow it. See [GitHub's comparison](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps) and [GitHub App user access](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app).
+## Can GitHub login work directly from Pages?
 
-For OAuth, private repository access requires the broad `repo` scope, which includes write privileges even though this app only reads. Request `read:org` for organization membership, without unrelated profile or email scopes. Public-only access can use narrower permissions but will not meet the private repository use case. See [OAuth scopes](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps).
+| Alternative | Assessment under the no-backend requirement |
+| --- | --- |
+| OAuth authorization code with PKCE | GitHub still requires a client secret for the code exchange. Static JavaScript cannot keep that secret. PKCE does not remove this requirement. |
+| OAuth device flow | Needs no client secret, but targets CLI/native clients. Browser requests also depend on CORS at GitHub's login endpoints; REST API CORS support does not establish support there. Do not treat it as a verified Pages solution. |
+| GitHub App | Adds installation and repository selection requirements and limits access to the intersection of user and app permissions. It does not by itself solve browser token acquisition. |
+| PAT with password manager and optional localStorage | Works with the existing static architecture. Still requires entering a token after loss of browser storage. |
+| Public repositories only | Can avoid credentials, but loses the authenticated private repository overview. |
+| Browser extension or local desktop/CLI companion | Can keep credentials outside website storage and support native authentication. Requires installing and maintaining another application. |
 
-## Proposed implementation
+GitHub's [OAuth authorization documentation](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps) specifies the secret requirement, device flow, and lack of an implicit flow. GitHub's [app comparison](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps) explains the permission and installation tradeoffs.
 
-Host the frontend and backend under one origin to simplify session cookies. Keeping the frontend on Pages would require explicit cross-origin session and CORS design. Register an OAuth App with an exact HTTPS callback and keep its client secret in backend configuration.
+### Device flow: promising outside a plain browser
 
-The backend should perform the authorization-code exchange, validate a single-use random `state`, and use PKCE with S256. GitHub currently requires a client secret for the web token exchange even with PKCE; publishing that secret in browser JavaScript is not an option. Device flow uses a verification code instead and targets headless clients. See [GitHub's authorization flows](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps).
+A native client can obtain a device code, ask the user to authorize on GitHub, and poll for a token using only its public client ID. A browser must additionally be allowed to read the cross-origin responses from `github.com/login/device/code` and `github.com/login/oauth/access_token`. GitHub documents [CORS for the REST API](https://docs.github.com/en/rest/using-the-rest-api/using-cors-and-jsonp-to-make-cross-origin-requests), which is a different host and API.
 
-Store GitHub tokens server-side and give the browser only an opaque session cookie with `HttpOnly`, `Secure`, and `SameSite=Lax`. Proxy the repository and organization reads through fixed backend endpoints; preserve pagination, and isolate any caches by user. Provide logout, session expiry, and clear handling of denied authorization, expired or revoked credentials, and organization restrictions. If expiring OAuth tokens are enabled, implement server-side refresh and handle refresh failure by signing in again.
+Credential-free POST probes from this checkout with the Pages Origin header and an invalid client ID returned HTTP 404 without `Access-Control-Allow-Origin` at both login endpoints. These error responses are evidence of a browser integration obstacle, not a complete test with a registered app. A registered-app browser proof of concept would need to verify both successful responses before recommending this approach. `fetch` with `mode: 'no-cors'` cannot help because it makes responses unreadable to JavaScript. A CORS proxy or hosted authentication service adds a backend dependency and therefore falls outside the stated requirement.
 
-Clearing cookies still ends the local session. The user then clicks **Sign in with GitHub** again, using their GitHub session or logging in there. This replaces manual token entry; it cannot promise permanent access. Revocation, expiry, and organization policy changes can require renewed authorization.
+## Suggested follow-up and validation
 
-Before rollout, verify sign-in and cancellation, callback state and PKCE failures, private repository and organization visibility, pagination, logout, token refresh or revocation, and signing in again after clearing cookies. Backend hosting and app registration are prerequisites for that implementation; no credentials are needed for this evaluation.
+If implementing the storage improvement, offer memory-only use by default and explicit consent to remember a token. Migrate an existing cookie only with consent, remove the old cookie after migration, and provide **Forget token** to erase local credentials and cached private data. Forgetting a token locally is separate from revoking it on GitHub. Handle denied, expired, or revoked tokens by prompting for a replacement without logging credentials.
+
+Keep a reusable copy in the password manager. Organization policy, token expiration, and revocation can still require renewal; no storage choice guarantees permanent access. Review token permissions against the current API calls before changing them, especially when private repositories span multiple organizations.
+
+Validate memory-only and remembered use, cookie-only deletion versus full site-data deletion, reload, migration, forgetting credentials, invalid tokens, and private repository visibility across organizations. This evaluation does not require app registration or credentials. Live authorized login and browser cleanup behavior have not been tested.
