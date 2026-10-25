@@ -16,6 +16,8 @@ In action:
 
 ## Authentication
 
+For an evaluation of signing in with GitHub instead of manually entering a token, see [Authentication alternatives](docs/authentication.md). The current application still uses the token flow described below.
+
 The project uses the official [GitHub REST-API](https://docs.github.com/en/rest?apiVersion=2022-11-28) and makes extensive use of the [list-repositories-for-the-authenticated-user](https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-repositories-for-the-authenticated-user) API-Call.
 
 For Authentication you will need a GitHub access token (classic) with full control of private repositories ("repo"). Otherwise you will only see public repositories.
